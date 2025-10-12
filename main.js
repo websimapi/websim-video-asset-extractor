@@ -278,10 +278,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         cellCtx.putImageData(imageData, 0, 0);
 
                         if (isCapturing) {
+                             // Capture the content directly from the cell's preview canvas
+                             // This ensures what you see is what you get for the GIF frames
                             const frameCanvas = document.createElement('canvas');
-                            frameCanvas.width = sWidth;
-                            frameCanvas.height = sHeight;
-                            frameCanvas.getContext('2d').putImageData(imageData, 0, 0);
+                            frameCanvas.width = cellCanvas.width;
+                            frameCanvas.height = cellCanvas.height;
+                            frameCanvas.getContext('2d').drawImage(cellCanvas, 0, 0);
                             cellFrames[cellIndex].push(frameCanvas);
                         }
                     } catch (e) {
