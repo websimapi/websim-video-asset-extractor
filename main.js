@@ -9,7 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const colsInput = document.getElementById('cols');
     const thresholdInput = document.getElementById('threshold');
     const thresholdValue = document.getElementById('threshold-value');
-    const paddingInput = document.getElementById('padding');
+    const paddingTopInput = document.getElementById('padding-top');
+    const paddingRightInput = document.getElementById('padding-right');
+    const paddingBottomInput = document.getElementById('padding-bottom');
+    const paddingLeftInput = document.getElementById('padding-left');
     const gridOverlay = document.getElementById('grid-overlay');
     const gifFpsInput = document.getElementById('gif-fps');
     const gifDurationInput = document.getElementById('gif-duration');
@@ -212,7 +215,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const threshold = parseInt(thresholdInput.value);
-            const padding = parseInt(paddingInput.value) || 0;
+            const paddingTop = parseInt(paddingTopInput.value) || 0;
+            const paddingRight = parseInt(paddingRightInput.value) || 0;
+            const paddingBottom = parseInt(paddingBottomInput.value) || 0;
+            const paddingLeft = parseInt(paddingLeftInput.value) || 0;
 
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
@@ -225,10 +231,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const xEnd = c === cols - 1 ? video.videoWidth : verticalLines[c];
                     const yEnd = r === rows - 1 ? video.videoHeight : horizontalLines[r];
 
-                    let sx = xStart + padding;
-                    let sy = yStart + padding;
-                    let sWidth = (xEnd - xStart) - (2 * padding);
-                    let sHeight = (yEnd - yStart) - (2 * padding);
+                    let sx = xStart + paddingLeft;
+                    let sy = yStart + paddingTop;
+                    let sWidth = (xEnd - xStart) - (paddingLeft + paddingRight);
+                    let sHeight = (yEnd - yStart) - (paddingTop + paddingBottom);
                     
                     if (sWidth < 0) sWidth = 0;
                     if (sHeight < 0) sHeight = 0;
