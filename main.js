@@ -126,11 +126,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const cellContainer = gridContainer.children[index];
             if (!cellContainer) return;
 
+            // Ensure there are frames to process
+            if (frames.length === 0) {
+                console.warn(`No frames captured for cell ${index}. Skipping GIF generation.`);
+                return;
+            }
+
             const statusEl = cellContainer.querySelector('.status');
             statusEl.textContent = 'Building...';
 
-            const width = frames[0]?.width || 1;
-            const height = frames[0]?.height || 1;
+            // --- FIX FOR BOUNCING GIFS ---
+            // Standardize all frames to the size of the first frame.
+            // This prevents the GIF from jittering if subsequent captured frames have
+            // minute, rounding-related size differences (e.g., 1px flicker).
+            const firstFrame = frames[0];
+            const width = firstFrame.width;
+            const height = firstFrame.height;
             
             const workerUrl = URL.createObjectURL(gifWorkerBlob);
             const gif = new GIF({
@@ -142,9 +153,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 transparent: 0x000000 // Black will be transparent
             });
 
+            const standardizedFrameCanvas = document.createElement('canvas');
+            standardizedFrameCanvas.width = width;
+            standardizedFrameCanvas.height = height;
+            const sfcCtx = standardizedFrameCanvas.getContext('2d');
+
             frames.forEach(frame => {
-                gif.addFrame(frame, { delay, copy: true });
+                sfcCtx.clearRect(0, 0, width, height); // Clear for transparency
+                sfcCtx.drawImage(frame, 0, 0, width, height); // Draw frame, ensuring it's the correct size
+                gif.addFrame(standardizedFrameCanvas, { delay, copy: true });
             });
+            // --- END FIX ---
 
             gif.on('progress', (p) => {
                 statusEl.textContent = `Building... ${(p * 100).toFixed(0)}%`;
