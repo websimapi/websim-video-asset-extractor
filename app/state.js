@@ -1,0 +1,40 @@
+export const dom = {
+    videoUpload: document.getElementById('video-upload'),
+    fileNameDisplay: document.getElementById('file-name'),
+    videoPreview: document.getElementById('video-preview'),
+    processButton: document.getElementById('process-button'),
+    generateGifsButton: document.getElementById('generate-gifs-button'),
+    gridContainer: document.getElementById('grid-container'),
+    rowsInput: document.getElementById('rows'),
+    colsInput: document.getElementById('cols'),
+    thresholdInput: document.getElementById('threshold'),
+    thresholdValue: document.getElementById('threshold-value'),
+    paddingTopInput: document.getElementById('padding-top'),
+    paddingRightInput: document.getElementById('padding-right'),
+    paddingBottomInput: document.getElementById('padding-bottom'),
+    paddingLeftInput: document.getElementById('padding-left'),
+    gridOverlay: document.getElementById('grid-overlay'),
+    gifFpsInput: document.getElementById('gif-fps'),
+    gifDurationInput: document.getElementById('gif-duration'),
+    exportOptions: document.getElementById('export-options'),
+    selectAllButton: document.getElementById('select-all-button'),
+    deselectAllButton: document.getElementById('deselect-all-button'),
+};
+
+export const state = {
+    video: null,
+    previewLoopId: null,
+    isCapturing: false,
+    cellFrames: [],
+    gifWorkerBlob: null,
+    cellCanvases: [],
+    hiddenCanvas: null,
+    hiddenCtx: null,
+    // A new array to hold stable capture dimensions for each cell
+    cellCaptureRects: [],
+    // A separate array for preview rects to allow real-time updates without affecting capture
+    cellPreviewRects: [],
+    verticalLines: [],
+    horizontalLines: [],
+    draggingLine: { type: null, index: -1 },
+};
