@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isCapturing = false;
     let cellFrames = [];
     let gifWorkerBlob = null;
+    let isProcessing = false; // To lock grid dragging
 
     // Preload gif.js worker
     (async function preloadWorker() {
@@ -66,6 +67,11 @@ document.addEventListener('DOMContentLoaded', () => {
     processButton.addEventListener('click', () => {
         if (!video || !video.src || video.src.endsWith('placeholder.png')) {
             alert('Please upload a video first.');
+            return;
+        }
+
+        if (isProcessing) {
+            console.log("Processing is already in progress.");
             return;
         }
 
@@ -165,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             video.addEventListener('loadedmetadata', () => setupGridAndProcess(), { once: true });
             return;
         }
+        isProcessing = true; // Lock grid
 
         const rows = parseInt(rowsInput.value);
         const cols = parseInt(colsInput.value);
@@ -206,6 +213,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const paddingBottom = parseInt(paddingBottomInput.value) || 0;
         const paddingLeft = parseInt(paddingLeftInput.value) || 0;
 
+        // Pre-calculate cell dimensions to ensure they are constant during capture
+        const cellDimensions = [];
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const xStart = c === 0 ? 0 : verticalLines[c - 1];
+                const yStart = r === 0 ? 0 : horizontalLines[r - 1];
+                const xEnd = c === cols - 1 ? video.videoWidth : verticalLines[c];
+                const yEnd = r === rows - 1 ? video.videoHeight : horizontalLines[r];
+
+                const sx = xStart + paddingLeft;
+                const sy = yStart + paddingTop;
+                let sWidth = (xEnd - xStart) - (paddingLeft + paddingRight);
+                let sHeight = (yEnd - yStart) - (paddingTop + paddingBottom);
+                
+                sWidth = sWidth > 0 ? sWidth : 0;
+                sHeight = sHeight > 0 ? sHeight : 0;
+                
+                cellDimensions.push({ sx, sy, sWidth, sHeight });
+            }
+        }
+
         const gifFps = parseInt(gifFpsInput.value, 10);
         const frameInterval = 1 / gifFps;
         const captureDuration = parseFloat(gifDurationInput.value);
@@ -221,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
             if (isCapturing && video.currentTime >= captureDuration) {
                 isCapturing = false;
+                isProcessing = false; // Unlock grid
                 console.log(`Finished capturing frames for ${captureDuration}s.`);
             }
 
@@ -237,19 +266,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const cellIndex = r * cols + c;
                     const cellCanvas = cellCanvases[cellIndex];
                     const cellCtx = cellCanvas.getContext('2d');
-
-                    const xStart = c === 0 ? 0 : verticalLines[c - 1];
-                    const yStart = r === 0 ? 0 : horizontalLines[r - 1];
-                    const xEnd = c === cols - 1 ? video.videoWidth : verticalLines[c];
-                    const yEnd = r === rows - 1 ? video.videoHeight : horizontalLines[r];
-
-                    let sx = xStart + paddingLeft;
-                    let sy = yStart + paddingTop;
-                    let sWidth = (xEnd - xStart) - (paddingLeft + paddingRight);
-                    let sHeight = (yEnd - yStart) - (paddingTop + paddingBottom);
                     
-                    if (sWidth < 0) sWidth = 0;
-                    if (sHeight < 0) sHeight = 0;
+                    const { sx, sy, sWidth, sHeight } = cellDimensions[cellIndex];
 
                     if (cellCanvas.width !== sWidth) cellCanvas.width = sWidth > 0 ? sWidth : 1;
                     if (cellCanvas.height !== sHeight) cellCanvas.height = sHeight > 0 ? sHeight : 1;
@@ -364,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleMouseDown(e) {
+        if (isProcessing) return; // Don't allow dragging while processing
         const pos = getMousePos(e);
         const scaleX = video.videoWidth / gridOverlay.clientWidth;
         const scaleY = video.videoHeight / gridOverlay.clientHeight;
@@ -385,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleMouseMove(e) {
-        if (!draggingLine.type) return;
+        if (isProcessing || !draggingLine.type) return; // Don't allow dragging while processing
         
         const pos = getMousePos(e);
         const scaleX = video.videoWidth / gridOverlay.clientWidth;
@@ -410,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleMouseUp() {
+        if (isProcessing) return;
         draggingLine = { type: null, index: -1 };
         gridOverlay.style.cursor = 'crosshair';
     }
