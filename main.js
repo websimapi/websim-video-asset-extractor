@@ -17,6 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const gifFpsInput = document.getElementById('gif-fps');
     const gifDurationInput = document.getElementById('gif-duration');
     const vectorizeEnabled = document.getElementById('vectorize-enabled');
+    const bitDepthSelect = document.getElementById('bit-depth');
+    const vectorScaleInput = document.getElementById('vector-scale');
+    const vectorizeOptions = document.getElementById('vectorize-options');
+    const vectorizeScaleOption = document.getElementById('vectorize-scale-option');
 
     let video;
     let animationFrameId;
@@ -53,6 +57,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     thresholdInput.addEventListener('input', (event) => {
         thresholdValue.textContent = event.target.value;
+    });
+
+    vectorizeEnabled.addEventListener('change', (event) => {
+        if (event.target.checked) {
+            vectorizeOptions.style.display = 'flex';
+            vectorizeScaleOption.style.display = 'flex';
+        } else {
+            vectorizeOptions.style.display = 'none';
+            vectorizeScaleOption.style.display = 'none';
+        }
     });
 
     [rowsInput, colsInput].forEach(input => {
@@ -412,8 +426,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function vectorizeImageData(imageData) {
+        const bitDepth = parseInt(bitDepthSelect.value);
+        const scale = parseFloat(vectorScaleInput.value);
+        
+        // Map bit depth to color levels
+        let colorLevels;
+        switch(bitDepth) {
+            case 8:
+                colorLevels = 4; // Very posterized
+                break;
+            case 16:
+                colorLevels = 16; // Medium posterization
+                break;
+            case 32:
+                colorLevels = 64; // Subtle posterization
+                break;
+            default:
+                colorLevels = 16;
+        }
+        
         const data = imageData.data;
-        const colorLevels = 8; // Reduce to 8 color levels per channel
+        const width = imageData.width;
+        const height = imageData.height;
+        
+        // Apply scale factor if not 1
+        if (scale !== 1) {
+            const scaledWidth = Math.max(1, Math.floor(width / scale));
+            const scaledHeight = Math.max(1, Math.floor(height / scale));
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = scaledWidth;
+            tempCanvas.height = scaledHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Downscale
+            tempCtx.putImageData(imageData, 0, 0);
+            const downscaled = tempCtx.getImageData(0, 0, scaledWidth, scaledHeight);
+            
+            // Upscale back (blocky effect)
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            tempCtx.imageSmoothingEnabled = false;
+            tempCtx.putImageData(downscaled, 0, 0);
+            tempCtx.drawImage(tempCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, width, height);
+            
+            const scaled = tempCtx.getImageData(0, 0, width, height);
+            data.set(scaled.data);
+        }
+        
         const step = 256 / colorLevels;
         
         // Posterize: Reduce color palette
@@ -426,8 +485,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Simple edge smoothing using a 3x3 kernel
-        const width = imageData.width;
-        const height = imageData.height;
         const tempData = new Uint8ClampedArray(data);
         
         for (let y = 1; y < height - 1; y++) {
