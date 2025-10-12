@@ -120,13 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 width,
                 height,
                 workerScript: workerUrl,
-                transparent: null, // Let the alpha channel in the canvas dictate transparency
-                background: '#000000' // Background for pixels that aren't transparent
+                transparent: 0x000000 // Black will be transparent
             });
 
             frames.forEach(frame => {
-                const ctx = frame.getContext('2d');
-                gif.addFrame(ctx.getImageData(0, 0, width, height), { delay });
+                gif.addFrame(frame, { delay, copy: true });
             });
 
             gif.on('progress', (p) => {
@@ -202,6 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
         hiddenCanvas.height = video.videoHeight;
         const hiddenCtx = hiddenCanvas.getContext('2d', { willReadFrequently: true });
 
+        // Read padding values once at the start of processing
+        const paddingTop = parseInt(paddingTopInput.value) || 0;
+        const paddingRight = parseInt(paddingRightInput.value) || 0;
+        const paddingBottom = parseInt(paddingBottomInput.value) || 0;
+        const paddingLeft = parseInt(paddingLeftInput.value) || 0;
+
         function processFrame() {
             if (video.paused || video.ended) {
                 animationFrameId = requestAnimationFrame(processFrame);
@@ -217,10 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const threshold = parseInt(thresholdInput.value);
-            const paddingTop = parseInt(paddingTopInput.value) || 0;
-            const paddingRight = parseInt(paddingRightInput.value) || 0;
-            const paddingBottom = parseInt(paddingBottomInput.value) || 0;
-            const paddingLeft = parseInt(paddingLeftInput.value) || 0;
 
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
@@ -257,10 +257,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             cellCtx.putImageData(imageData, 0, 0);
 
                             if(isCapturing) {
+                                // Create a new canvas with the exact padded dimensions
                                 const frameCanvas = document.createElement('canvas');
-                                frameCanvas.width = cellCanvas.width;
-                                frameCanvas.height = cellCanvas.height;
-                                frameCanvas.getContext('2d').drawImage(cellCanvas, 0, 0);
+                                frameCanvas.width = sWidth;
+                                frameCanvas.height = sHeight;
+                                const frameCtx = frameCanvas.getContext('2d');
+                                
+                                // Put the processed imageData directly onto the frame canvas
+                                frameCtx.putImageData(imageData, 0, 0);
+                                
                                 cellFrames[cellIndex].push(frameCanvas);
                             }
 
