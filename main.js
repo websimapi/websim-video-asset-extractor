@@ -18,11 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const gifDurationInput = document.getElementById('gif-duration');
 
     let video;
-    let animationFrameId;
+    let previewLoopId;
     let isCapturing = false;
     let cellFrames = [];
     let gifWorkerBlob = null;
-    let previousCellDimensions = []; // Track dimensions to prevent unnecessary resizing
+    let cellCanvases = [];
+    let hiddenCanvas, hiddenCtx;
 
     // Preload gif.js worker
     (async function preloadWorker() {
@@ -48,6 +49,16 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPreview.src = fileURL;
             video = videoPreview;
             fileNameDisplay.textContent = file.name;
+
+            video.addEventListener('loadedmetadata', () => {
+                // Stop any previous loop
+                if (previewLoopId) {
+                    cancelAnimationFrame(previewLoopId);
+                }
+                // Setup canvases and start the real-time preview
+                setupGridAndCanvases();
+                startPreviewLoop();
+            }, { once: true });
         }
     });
 
@@ -58,23 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
     [rowsInput, colsInput].forEach(input => {
         input.addEventListener('change', () => {
             if (video && video.videoWidth > 0) {
-                resetGridLines();
-                drawGridOverlay();
-                if (animationFrameId) {
-                    restartProcessing();
-                }
-            }
-        });
-    });
-
-    // Add listeners for padding inputs
-    [paddingTopInput, paddingRightInput, paddingBottomInput, paddingLeftInput].forEach(input => {
-        input.addEventListener('input', () => {
-            if (video && video.videoWidth > 0) {
-                drawGridOverlay();
-                if (animationFrameId) {
-                    restartProcessing();
-                }
+                // Re-initialize grid and canvases for the new dimensions
+                setupGridAndCanvases();
             }
         });
     });
@@ -85,18 +81,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-        }
-        
+        if (isCapturing) return;
+
         video.currentTime = 0;
         isCapturing = true;
-        cellFrames = [];
+        cellFrames = Array.from({ length: rowsInput.value * colsInput.value }, () => []);
+        
+        processButton.disabled = true;
+        processButton.textContent = 'Capturing...';
 
-        video.play().then(() => {
-            setupGridAndProcess();
-        }).catch(err => {
-            alert("Could not play video. Make sure you've interacted with the page.");
+        const captureDuration = parseFloat(gifDurationInput.value);
+        setTimeout(() => {
+            isCapturing = false;
+            console.log(`Finished capturing ${captureDuration}s of frames.`);
+            processButton.disabled = false;
+            processButton.textContent = '2. Capture Frames';
+        }, captureDuration * 1000);
+
+        video.play().catch(err => {
+            alert("Could not play video to capture. Make sure you've interacted with the page.");
             console.error("Video play error:", err);
         });
     });
@@ -176,22 +179,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    function setupGridAndProcess() {
-        if (video.videoWidth === 0) {
-            video.addEventListener('loadedmetadata', () => setupGridAndProcess(), { once: true });
-            return;
-        }
-
+    function setupGridAndCanvases() {
         const rows = parseInt(rowsInput.value);
         const cols = parseInt(colsInput.value);
 
         gridContainer.innerHTML = '';
         gridContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         generateGifsButton.style.display = 'inline-block';
+        processButton.textContent = '2. Capture Frames';
         
-        const cellCanvases = [];
-        previousCellDimensions = []; // Reset dimension tracking
-        
+        cellCanvases = [];
+        cellFrames = [];
         for (let i = 0; i < rows * cols; i++) {
             const cellContainer = document.createElement('div');
             cellContainer.className = 'cell-container';
@@ -207,130 +205,103 @@ document.addEventListener('DOMContentLoaded', () => {
             
             cellCanvases.push(canvas);
             cellFrames.push([]);
-            previousCellDimensions.push({ width: 0, height: 0 });
         }
 
         resetGridLines();
         drawGridOverlay();
         setupDragListeners();
 
-        const hiddenCanvas = document.createElement('canvas');
+        if (!hiddenCanvas) {
+            hiddenCanvas = document.createElement('canvas');
+            hiddenCtx = hiddenCanvas.getContext('2d', { willReadFrequently: true });
+        }
         hiddenCanvas.width = video.videoWidth;
         hiddenCanvas.height = video.videoHeight;
-        const hiddenCtx = hiddenCanvas.getContext('2d', { willReadFrequently: true });
+    }
 
-        // Read padding values once at the start of processing
-        const paddingTop = parseInt(paddingTopInput.value) || 0;
-        const paddingRight = parseInt(paddingRightInput.value) || 0;
-        const paddingBottom = parseInt(paddingBottomInput.value) || 0;
-        const paddingLeft = parseInt(paddingLeftInput.value) || 0;
+    function startPreviewLoop() {
+        if (previewLoopId) {
+            cancelAnimationFrame(previewLoopId);
+        }
 
-        function processFrame() {
-            if (video.paused || video.ended) {
-                animationFrameId = requestAnimationFrame(processFrame);
+        function updatePreviewLoop() {
+            if (video.paused || video.ended || video.videoWidth === 0) {
+                previewLoopId = requestAnimationFrame(updatePreviewLoop);
                 return;
             }
 
+            // Read settings on every frame for real-time updates
+            const rows = parseInt(rowsInput.value);
+            const cols = parseInt(colsInput.value);
+            const threshold = parseInt(thresholdInput.value);
+            const paddingTop = parseInt(paddingTopInput.value) || 0;
+            const paddingRight = parseInt(paddingRightInput.value) || 0;
+            const paddingBottom = parseInt(paddingBottomInput.value) || 0;
+            const paddingLeft = parseInt(paddingLeftInput.value) || 0;
+            
             hiddenCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
             
-            const captureDuration = parseFloat(gifDurationInput.value);
-            if (video.currentTime >= captureDuration && isCapturing) {
-                isCapturing = false;
-                console.log(`Finished capturing ${captureDuration}s of frames.`);
-            }
-
-            const threshold = parseInt(thresholdInput.value);
-
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
                     const cellIndex = r * cols + c;
                     const cellCanvas = cellCanvases[cellIndex];
+                    if (!cellCanvas) continue;
                     const cellCtx = cellCanvas.getContext('2d');
 
                     const xStart = c === 0 ? 0 : verticalLines[c - 1];
                     const yStart = r === 0 ? 0 : horizontalLines[r - 1];
                     const xEnd = c === cols - 1 ? video.videoWidth : verticalLines[c];
                     const yEnd = r === rows - 1 ? video.videoHeight : horizontalLines[r];
-
-                    let sx = xStart + paddingLeft;
-                    let sy = yStart + paddingTop;
-                    let sWidth = (xEnd - xStart) - (paddingLeft + paddingRight);
-                    let sHeight = (yEnd - yStart) - (paddingTop + paddingBottom);
                     
-                    if (sWidth < 0) sWidth = 0;
-                    if (sHeight < 0) sHeight = 0;
-
-                    // Only resize canvas if dimensions actually changed
-                    const finalWidth = sWidth > 0 ? sWidth : 1;
-                    const finalHeight = sHeight > 0 ? sHeight : 1;
+                    // Round all calculated values to integers to prevent 1px jitter
+                    const sx = Math.round(xStart + paddingLeft);
+                    const sy = Math.round(yStart + paddingTop);
+                    let sWidth = Math.round((xEnd - xStart) - (paddingLeft + paddingRight));
+                    let sHeight = Math.round((yEnd - yStart) - (paddingTop + paddingBottom));
                     
-                    if (previousCellDimensions[cellIndex].width !== finalWidth || 
-                        previousCellDimensions[cellIndex].height !== finalHeight) {
-                        cellCanvas.width = finalWidth;
-                        cellCanvas.height = finalHeight;
-                        previousCellDimensions[cellIndex] = { width: finalWidth, height: finalHeight };
-                    }
+                    if (sWidth < 1) sWidth = 1;
+                    if (sHeight < 1) sHeight = 1;
 
-                    if (sWidth > 0 && sHeight > 0) {
-                        try {
-                            const imageData = hiddenCtx.getImageData(sx, sy, sWidth, sHeight);
-                            const data = imageData.data;
+                    // Resize canvas only if necessary
+                    if (cellCanvas.width !== sWidth) cellCanvas.width = sWidth;
+                    if (cellCanvas.height !== sHeight) cellCanvas.height = sHeight;
 
-                            for (let i = 0; i < data.length; i += 4) {
-                                if (data[i] <= threshold && data[i + 1] <= threshold && data[i + 2] <= threshold) {
-                                    data[i + 3] = 0;
-                                }
-                            }
-                            cellCtx.putImageData(imageData, 0, 0);
+                    try {
+                        const imageData = hiddenCtx.getImageData(sx, sy, sWidth, sHeight);
+                        const data = imageData.data;
 
-                            if(isCapturing) {
-                                // Create a new canvas with the exact padded dimensions
-                                const frameCanvas = document.createElement('canvas');
-                                frameCanvas.width = sWidth;
-                                frameCanvas.height = sHeight;
-                                const frameCtx = frameCanvas.getContext('2d');
-                                
-                                // Put the processed imageData directly onto the frame canvas
-                                frameCtx.putImageData(imageData, 0, 0);
-                                
-                                cellFrames[cellIndex].push(frameCanvas);
-                            }
-
-                        } catch (e) {
-                             if (e instanceof DOMException && e.name === "IndexSizeError") {
-                                // This can happen if padding is too large, just skip frame for this cell
-                            } else {
-                                console.error(`Error processing cell (${r},${c}):`, e);
+                        for (let i = 0; i < data.length; i += 4) {
+                            if (data[i] <= threshold && data[i + 1] <= threshold && data[i + 2] <= threshold) {
+                                data[i + 3] = 0; // Make transparent
                             }
                         }
-                    } else {
-                        cellCtx.clearRect(0, 0, cellCanvas.width, cellCanvas.height);
+                        cellCtx.putImageData(imageData, 0, 0);
+
+                        if (isCapturing) {
+                            const frameCanvas = document.createElement('canvas');
+                            frameCanvas.width = sWidth;
+                            frameCanvas.height = sHeight;
+                            frameCanvas.getContext('2d').putImageData(imageData, 0, 0);
+                            cellFrames[cellIndex].push(frameCanvas);
+                        }
+                    } catch (e) {
+                         if (e instanceof DOMException && e.name === "IndexSizeError") {
+                            // This can happen if padding is too large or crop area is outside bounds.
+                            // Clear canvas to indicate an issue with settings for this cell.
+                            cellCtx.clearRect(0, 0, cellCanvas.width, cellCanvas.height);
+                        } else {
+                            console.error(`Error processing cell (${r},${c}):`, e);
+                            cancelAnimationFrame(previewLoopId); // Stop on critical error
+                            return;
+                        }
                     }
                 }
             }
-            animationFrameId = requestAnimationFrame(processFrame);
+            previewLoopId = requestAnimationFrame(updatePreviewLoop);
         }
-        processFrame();
+        updatePreviewLoop();
     }
 
-    function restartProcessing() {
-        // Cancel current processing
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-        }
-        
-        // Reset capture state
-        video.currentTime = 0;
-        isCapturing = true;
-        cellFrames = [];
-        
-        // Restart processing
-        video.play().then(() => {
-            setupGridAndProcess();
-        }).catch(err => {
-            console.error("Video play error:", err);
-        });
-    }
 
     function resetGridLines() {
         const rows = parseInt(rowsInput.value);
@@ -441,11 +412,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         drawGridOverlay();
-        
-        // Restart processing with new grid lines
-        if (animationFrameId) {
-            restartProcessing();
-        }
     }
 
     function handleMouseUp() {
