@@ -1,0 +1,148 @@
+:root {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --border-color: #444;
+    --container-bg: #2c2c2c;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+}
+
+.main-container {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+header {
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+}
+
+header h1 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.controls {
+    background-color: var(--container-bg);
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.control-group.settings {
+    flex-grow: 1;
+    justify-content: center;
+    gap: 25px;
+}
+
+.control-group label {
+    font-weight: bold;
+}
+
+input[type="number"] {
+    width: 60px;
+    padding: 5px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+input[type="range"] {
+    width: 120px;
+}
+
+.button, button {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s;
+}
+
+.button:hover, button:hover {
+    background-color: var(--primary-hover);
+}
+
+#file-name {
+    font-style: italic;
+    color: #ccc;
+}
+
+.content-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.video-container, .grid-wrapper {
+    background-color: var(--container-bg);
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.video-container h2, .grid-wrapper h2 {
+    margin-top: 0;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+
+#video-preview {
+    width: 100%;
+    max-height: 500px;
+    border-radius: 4px;
+    background-color: #000;
+}
+
+.grid-container {
+    display: grid;
+    gap: 5px;
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--border-color);
+}
+
+.grid-container canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.placeholder-text {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #888;
+    align-self: center;
+}
+

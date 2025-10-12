@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Asset Extractor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="main-container">
+        <header>
+            <h1>Video Asset Extractor</h1>
+            <p>Upload a video grid (like one from Sora), and this tool will split it into cells and make the black background transparent.</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="video-upload" class="button">1. Upload Video</label>
+                <input type="file" id="video-upload" accept="video/*" hidden>
+                <span id="file-name">No file chosen</span>
+            </div>
+            
+            <div class="control-group settings">
+                <div>
+                    <label for="rows">Grid Rows:</label>
+                    <input type="number" id="rows" value="8" min="1">
+                </div>
+                <div>
+                    <label for="cols">Grid Columns:</label>
+                    <input type="number" id="cols" value="8" min="1">
+                </div>
+                <div>
+                    <label for="threshold">Black Threshold: <span id="threshold-value">20</span></label>
+                    <input type="range" id="threshold" min="0" max="255" value="20">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <button id="process-button">2. Process Video</button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="video-container">
+                <h2>Source Video</h2>
+                <video id="video-preview" controls muted loop playsinline src="placeholder.png"></video>
+            </div>
+    
+            <div class="grid-wrapper">
+                <h2>Extracted Assets</h2>
+                <div id="grid-container" class="grid-container">
+                    <p class="placeholder-text">Your extracted assets will appear here after processing.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="main.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
