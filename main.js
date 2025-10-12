@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gridOverlay = document.getElementById('grid-overlay');
     const gifFpsInput = document.getElementById('gif-fps');
     const gifDurationInput = document.getElementById('gif-duration');
+    const vectorizeEnabled = document.getElementById('vectorize-enabled');
 
     let video;
     let animationFrameId;
@@ -254,6 +255,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                     data[i + 3] = 0;
                                 }
                             }
+                            
+                            // Apply vectorization if enabled
+                            if (vectorizeEnabled.checked) {
+                                vectorizeImageData(imageData);
+                            }
+                            
                             cellCtx.putImageData(imageData, 0, 0);
 
                             if(isCapturing) {
@@ -402,5 +409,76 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleMouseUp() {
         draggingLine = { type: null, index: -1 };
         gridOverlay.style.cursor = 'crosshair';
+    }
+    
+    function vectorizeImageData(imageData) {
+        const data = imageData.data;
+        const colorLevels = 8; // Reduce to 8 color levels per channel
+        const step = 256 / colorLevels;
+        
+        // Posterize: Reduce color palette
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] === 0) continue; // Skip transparent pixels
+            
+            data[i] = Math.round(data[i] / step) * step; // R
+            data[i + 1] = Math.round(data[i + 1] / step) * step; // G
+            data[i + 2] = Math.round(data[i + 2] / step) * step; // B
+        }
+        
+        // Simple edge smoothing using a 3x3 kernel
+        const width = imageData.width;
+        const height = imageData.height;
+        const tempData = new Uint8ClampedArray(data);
+        
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                const idx = (y * width + x) * 4;
+                
+                if (tempData[idx + 3] === 0) continue;
+                
+                // Count similar neighboring pixels
+                let similar = 0;
+                let total = 0;
+                
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        
+                        const nIdx = ((y + dy) * width + (x + dx)) * 4;
+                        if (tempData[nIdx + 3] === 0) continue;
+                        
+                        total++;
+                        const colorDiff = Math.abs(tempData[idx] - tempData[nIdx]) +
+                                        Math.abs(tempData[idx + 1] - tempData[nIdx + 1]) +
+                                        Math.abs(tempData[idx + 2] - tempData[nIdx + 2]);
+                        
+                        if (colorDiff < 50) similar++;
+                    }
+                }
+                
+                // If mostly similar neighbors, smooth the color
+                if (total > 0 && similar / total > 0.6) {
+                    let avgR = 0, avgG = 0, avgB = 0, count = 0;
+                    
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            const nIdx = ((y + dy) * width + (x + dx)) * 4;
+                            if (tempData[nIdx + 3] > 0) {
+                                avgR += tempData[nIdx];
+                                avgG += tempData[nIdx + 1];
+                                avgB += tempData[nIdx + 2];
+                                count++;
+                            }
+                        }
+                    }
+                    
+                    if (count > 0) {
+                        data[idx] = Math.round(avgR / count / step) * step;
+                        data[idx + 1] = Math.round(avgG / count / step) * step;
+                        data[idx + 2] = Math.round(avgB / count / step) * step;
+                    }
+                }
+            }
+        }
     }
 });

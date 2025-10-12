@@ -96,6 +96,11 @@ input[type="number"] {
     text-align: center;
 }
 
+input[type="checkbox"] {
+    cursor: pointer;
+    margin-right: 5px;
+}
+
 input[type="range"] {
     width: 120px;
 }
