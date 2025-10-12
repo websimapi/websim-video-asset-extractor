@@ -16,6 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const gridOverlay = document.getElementById('grid-overlay');
     const gifFpsInput = document.getElementById('gif-fps');
     const gifDurationInput = document.getElementById('gif-duration');
+    const exportOptions = document.getElementById('export-options');
+    const selectAllButton = document.getElementById('select-all-button');
+    const deselectAllButton = document.getElementById('deselect-all-button');
 
     let video;
     let previewLoopId;
@@ -30,11 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // A separate array for preview rects to allow real-time updates without affecting capture
     let cellPreviewRects = [];
 
-    // Preload gif.js worker by using its script tag, not fetching it. This avoids CORS issues on some browsers.
+    // Preload gif.js worker
     (async function preloadWorker() {
-        // gif.js now loaded via script tag, so this fetch is no longer needed.
-        // We can create the worker URL directly from the window object where gif.js registers itself.
-        // This is handled in the GIF generation logic.
+        try {
+            const resp = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+            gifWorkerBlob = await resp.blob();
+        } catch (e) {
+            console.error("Failed to load gif.worker.js", e);
+            alert("Could not load a required component for GIF generation. Please check your internet connection and try again.");
+        }
     })();
 
     // Grid state
@@ -84,6 +91,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    selectAllButton.addEventListener('click', () => {
+        document.querySelectorAll('.cell-checkbox').forEach(cb => cb.checked = true);
+    });
+
+    deselectAllButton.addEventListener('click', () => {
+        document.querySelectorAll('.cell-checkbox').forEach(cb => cb.checked = false);
+    });
+
     processButton.addEventListener('click', () => {
         if (!video || !video.src || video.src.endsWith('placeholder.png')) {
             alert('Please upload a video first.');
@@ -124,93 +139,117 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Please process the video first to capture frames.');
             return;
         }
+        if (!gifWorkerBlob) {
+            alert('GIF generator is not ready. Please wait a moment and try again.');
+            return;
+        }
+
+        const selectedIndices = [];
+        document.querySelectorAll('.cell-checkbox').forEach((cb, index) => {
+            if (cb.checked) {
+                selectedIndices.push(index);
+            }
+        });
+
+        if (selectedIndices.length === 0) {
+            alert('Please select at least one cell to export.');
+            return;
+        }
 
         generateGifsButton.disabled = true;
         generateGifsButton.textContent = 'Generating...';
 
-        const totalCells = parseInt(rowsInput.value) * parseInt(colsInput.value);
-        let gifsCompleted = 0;
+        const generationMode = document.querySelector('input[name="gen-mode"]:checked').value;
 
-        function onGifFinished() {
-            gifsCompleted++;
-            if (gifsCompleted === totalCells) {
-                generateGifsButton.disabled = false;
-                generateGifsButton.textContent = '3. Generate GIFs';
-            }
+        if (generationMode === 'parallel') {
+            generateGifsParallel(selectedIndices);
+        } else {
+            generateGifsSequentially(selectedIndices);
         }
-
-        cellFrames.forEach((frames, index) => {
-            generateGifForCell(index, onGifFinished);
-        });
     });
 
-    function generateGifForCell(index, onComplete, retryCount = 0) {
-        const MAX_RETRIES = 2;
-        const GENERATION_TIMEOUT = 30000; // 30 seconds
-
-        const cellContainer = gridContainer.children[index];
-        if (!cellContainer) {
-            onComplete();
-            return;
-        }
-        const statusEl = cellContainer.querySelector('.status');
-        const frames = cellFrames[index];
-
-        if (frames.length === 0) {
-            console.warn(`No frames captured for cell ${index}. Skipping GIF generation.`);
-            statusEl.textContent = 'No frames';
-            onComplete();
-            return;
-        }
-
-        if (retryCount > MAX_RETRIES) {
-            console.error(`GIF generation for cell ${index} failed after ${MAX_RETRIES} retries.`);
-            statusEl.textContent = 'Failed!';
-            onComplete();
-            return;
-        }
-        
-        if (retryCount > 0) {
-            statusEl.textContent = `Retrying... (${retryCount}/${MAX_RETRIES})`;
-        } else {
-            statusEl.textContent = 'Building...';
-        }
-
+    function generateGifsParallel(indices) {
         const gifFps = parseInt(gifFpsInput.value, 10);
         const delay = 1000 / gifFps;
-        
+        let gifsCompleted = 0;
+
+        indices.forEach(index => {
+            generateSingleGif(index, delay, () => {
+                gifsCompleted++;
+                if (gifsCompleted === indices.length) {
+                    generateGifsButton.disabled = false;
+                    generateGifsButton.textContent = '3. Generate GIFs';
+                }
+            });
+        });
+    }
+
+    function generateGifsSequentially(indices) {
+        const gifFps = parseInt(gifFpsInput.value, 10);
+        const delay = 1000 / gifFps;
+        let currentIndex = 0;
+
+        function next() {
+            if (currentIndex >= indices.length) {
+                generateGifsButton.disabled = false;
+                generateGifsButton.textContent = '3. Generate GIFs';
+                return;
+            }
+            const cellIndex = indices[currentIndex];
+            currentIndex++;
+            generateSingleGif(cellIndex, delay, next);
+        }
+
+        next();
+    }
+
+    function generateSingleGif(index, delay, onFinishedCallback) {
+        const frames = cellFrames[index];
+        const cellContainer = gridContainer.children[index];
+        if (!cellContainer) return;
+
+        // Ensure there are frames to process
+        if (frames.length === 0) {
+            console.warn(`No frames captured for cell ${index}. Skipping GIF generation.`);
+            if (onFinishedCallback) onFinishedCallback();
+            return;
+        }
+
+        const statusEl = cellContainer.querySelector('.status');
+        statusEl.textContent = 'Building...';
+
+        // --- FIX FOR BOUNCING GIFS ---
+        // Standardize all frames to the size of the first frame.
+        // This prevents the GIF from jittering if subsequent captured frames have
+        // minute, rounding-related size differences (e.g., 1px flicker).
         const firstFrame = frames[0];
         const width = firstFrame.width;
         const height = firstFrame.height;
-
-        // gif.js creates its worker URL from the script path.
+        
+        const workerUrl = URL.createObjectURL(gifWorkerBlob);
         const gif = new GIF({
             workers: 2,
             quality: 10,
             width,
             height,
+            workerScript: workerUrl,
             transparent: 0x000000 // Black will be transparent
         });
 
-        const timeoutId = setTimeout(() => {
-            console.warn(`GIF generation for cell ${index} timed out. Retrying...`);
-            gif.abort();
-            generateGifForCell(index, onComplete, retryCount + 1);
-        }, GENERATION_TIMEOUT);
-
+        // --- FIX FOR GIF PADDING ---
+        // The frames are already correctly sized from the capture process,
+        // which uses the stable cellCaptureRects. We just need to add them.
         frames.forEach(frame => {
             gif.addFrame(frame, { delay });
         });
+        // --- END FIX ---
 
         gif.on('progress', (p) => {
-            if (retryCount === 0) { // Only show progress on first attempt
-                statusEl.textContent = `Building... ${(p * 100).toFixed(0)}%`;
-            }
+            statusEl.textContent = `Building... ${(p * 100).toFixed(0)}%`;
         });
 
         gif.on('finished', (blob) => {
-            clearTimeout(timeoutId);
-
+            URL.revokeObjectURL(workerUrl);
             const url = URL.createObjectURL(blob);
             const img = document.createElement('img');
             img.src = url;
@@ -220,13 +259,16 @@ document.addEventListener('DOMContentLoaded', () => {
             a.download = `asset_${index}.gif`;
             a.appendChild(img);
             
+            // Replace canvas with the gif link
             const canvas = cellContainer.querySelector('canvas');
             if (canvas) {
                  cellContainer.replaceChild(a, canvas);
             }
             statusEl.textContent = 'Done!';
 
-            onComplete();
+            if (onFinishedCallback) {
+                onFinishedCallback();
+            }
         });
 
         gif.render();
@@ -239,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gridContainer.innerHTML = '';
         gridContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         generateGifsButton.style.display = 'inline-block';
+        exportOptions.style.display = 'flex';
         processButton.textContent = '2. Capture Frames';
         
         cellCanvases = [];
@@ -252,8 +295,15 @@ document.addEventListener('DOMContentLoaded', () => {
             status.className = 'status';
             status.textContent = 'Preview';
 
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'cell-checkbox';
+            checkbox.checked = true;
+            checkbox.title = 'Export this cell';
+
             cellContainer.appendChild(canvas);
             cellContainer.appendChild(status);
+            cellContainer.appendChild(checkbox);
             gridContainer.appendChild(cellContainer);
             
             cellCanvases.push(canvas);

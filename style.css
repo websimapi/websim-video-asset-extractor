@@ -111,6 +111,14 @@ input[type="range"] {
     transition: background-color 0.2s;
 }
 
+#export-options label {
+    font-weight: normal;
+}
+
+#export-options input[type="radio"] {
+    margin-left: 10px;
+}
+
 .button:hover, button:hover {
     background-color: var(--primary-hover);
 }
@@ -180,6 +188,16 @@ input[type="range"] {
     position: relative;
     width: 100%;
     height: 100%;
+}
+
+.cell-container .cell-checkbox {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    z-index: 20;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
 }
 
 .cell-container .status {
