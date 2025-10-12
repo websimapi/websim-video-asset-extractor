@@ -253,11 +253,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     const xEnd = c === cols - 1 ? video.videoWidth : verticalLines[c];
                     const yEnd = r === rows - 1 ? video.videoHeight : horizontalLines[r];
                     
-                    // Round all calculated values to integers to prevent 1px jitter
-                    const sx = Math.round(xStart + paddingLeft);
-                    const sy = Math.round(yStart + paddingTop);
-                    let sWidth = Math.round((xEnd - xStart) - (paddingLeft + paddingRight));
-                    let sHeight = Math.round((yEnd - yStart) - (paddingTop + paddingBottom));
+                    // --- FIX FOR JITTER/BOUNCE ---
+                    // Calculate start and end crop coordinates with padding, then round them.
+                    // This creates a stable source rectangle and prevents 1px dimension flickering.
+                    const sx1 = Math.round(xStart + paddingLeft);
+                    const sy1 = Math.round(yStart + paddingTop);
+                    const sx2 = Math.round(xEnd - paddingRight);
+                    const sy2 = Math.round(yEnd - paddingBottom);
+
+                    // Derive width and height from the rounded coordinates.
+                    let sWidth = sx2 - sx1;
+                    let sHeight = sy2 - sy1;
+                    // --- END FIX ---
                     
                     if (sWidth < 1) sWidth = 1;
                     if (sHeight < 1) sHeight = 1;
@@ -267,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (cellCanvas.height !== sHeight) cellCanvas.height = sHeight;
 
                     try {
-                        const imageData = hiddenCtx.getImageData(sx, sy, sWidth, sHeight);
+                        const imageData = hiddenCtx.getImageData(sx1, sy1, sWidth, sHeight);
                         const data = imageData.data;
 
                         for (let i = 0; i < data.length; i += 4) {
