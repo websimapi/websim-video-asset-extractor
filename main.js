@@ -285,16 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             cellCtx.putImageData(imageData, 0, 0);
 
                             if(shouldCaptureThisFrame) {
-                                // Create a new canvas with the exact padded dimensions
-                                const frameCanvas = document.createElement('canvas');
-                                frameCanvas.width = sWidth;
-                                frameCanvas.height = sHeight;
-                                const frameCtx = frameCanvas.getContext('2d');
-                                
-                                // Put the processed imageData directly onto the frame canvas
-                                frameCtx.putImageData(imageData, 0, 0);
-                                
-                                cellFrames[cellIndex].push(frameCanvas);
+                                // The imageData is already cropped and processed.
+                                // It can be directly used for the GIF frame.
+                                cellFrames[cellIndex].push(imageData);
                             }
 
                         } catch (e) {
