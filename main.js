@@ -120,11 +120,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 width,
                 height,
                 workerScript: workerUrl,
-                transparent: 0x000000 // Black will be transparent
+                transparent: null, // Let the alpha channel in the canvas dictate transparency
+                background: '#000000' // Background for pixels that aren't transparent
             });
 
             frames.forEach(frame => {
-                gif.addFrame(frame, { delay, copy: true });
+                const ctx = frame.getContext('2d');
+                gif.addFrame(ctx.getImageData(0, 0, width, height), { delay });
             });
 
             gif.on('progress', (p) => {
