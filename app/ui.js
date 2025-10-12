@@ -77,11 +77,19 @@ function handleProcess() {
     state.cellCaptureRects = JSON.parse(JSON.stringify(state.cellPreviewRects));
 
     state.video.currentTime = 0;
+    state.video.pause(); // Pause to ensure the first frame is drawn correctly.
     state.isCapturing = true;
     state.cellFrames = Array.from({ length: dom.rowsInput.value * dom.colsInput.value }, () => []);
 
     dom.processButton.disabled = true;
     dom.processButton.textContent = 'Capturing...';
+    
+    // Ensure the preview is active from the start of capture
+    if (state.previewLoopId) {
+        cancelAnimationFrame(state.previewLoopId);
+    }
+    startPreviewLoop();
+
 
     const captureDuration = parseFloat(dom.gifDurationInput.value);
     setTimeout(() => {
@@ -89,6 +97,7 @@ function handleProcess() {
         console.log(`Finished capturing ${captureDuration}s of frames.`);
         dom.processButton.disabled = false;
         dom.processButton.textContent = '2. Capture Frames';
+        state.video.pause();
     }, captureDuration * 1000);
 
     state.video.play().catch(err => {
