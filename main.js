@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // A new array to hold stable capture dimensions for each cell
     let cellCaptureRects = [];
+    // A separate array for preview rects to allow real-time updates without affecting capture
+    let cellPreviewRects = [];
 
     // Preload gif.js worker
     (async function preloadWorker() {
@@ -78,6 +80,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    [paddingTopInput, paddingRightInput, paddingBottomInput, paddingLeftInput].forEach(input => {
+        input.addEventListener('input', () => {
+            if (video && video.videoWidth > 0) {
+                updateCellRects(); // Update preview rects in real-time
+            }
+        });
+    });
+
     processButton.addEventListener('click', () => {
         if (!video || !video.src || video.src.endsWith('placeholder.png')) {
             alert('Please upload a video first.');
@@ -88,35 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- FIX FOR BOUNCING GIFS ---
         // Pre-calculate the stable source rectangles for each cell before capture.
-        // This prevents floating-point and rounding inconsistencies during the capture loop.
-        const rows = parseInt(rowsInput.value);
-        const cols = parseInt(colsInput.value);
-        const paddingTop = parseInt(paddingTopInput.value) || 0;
-        const paddingRight = parseInt(paddingRightInput.value) || 0;
-        const paddingBottom = parseInt(paddingBottomInput.value) || 0;
-        const paddingLeft = parseInt(paddingLeftInput.value) || 0;
-        cellCaptureRects = []; // Clear previous rects
-
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const xStart = c === 0 ? 0 : verticalLines[c - 1];
-                const yStart = r === 0 ? 0 : horizontalLines[r - 1];
-                const xEnd = c === cols - 1 ? video.videoWidth : verticalLines[c];
-                const yEnd = r === rows - 1 ? video.videoHeight : horizontalLines[r];
-
-                const sx = Math.round(xStart + paddingLeft);
-                const sy = Math.round(yStart + paddingTop);
-                const sWidth = Math.round(xEnd - paddingRight) - sx;
-                const sHeight = Math.round(yEnd - paddingBottom) - sy;
-                
-                cellCaptureRects.push({
-                    sx: sx,
-                    sy: sy,
-                    sWidth: sWidth > 0 ? sWidth : 1,
-                    sHeight: sHeight > 0 ? sHeight : 1
-                });
-            }
-        }
+        // This is now done in updateCellRects and we just copy the latest preview state.
+        cellCaptureRects = JSON.parse(JSON.stringify(cellPreviewRects));
         // --- END FIX ---
 
         video.currentTime = 0;
@@ -189,18 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 transparent: 0x000000 // Black will be transparent
             });
 
-            // This secondary standardization using a canvas is a robust fallback,
-            // but the primary fix is pre-calculating capture rectangles.
-            // We'll keep this as a safeguard.
-            const standardizedFrameCanvas = document.createElement('canvas');
-            standardizedFrameCanvas.width = width;
-            standardizedFrameCanvas.height = height;
-            const sfcCtx = standardizedFrameCanvas.getContext('2d');
-
+            // --- FIX FOR GIF PADDING ---
+            // The frames are already correctly sized from the capture process,
+            // which uses the stable cellCaptureRects. We just need to add them.
             frames.forEach(frame => {
-                sfcCtx.clearRect(0, 0, width, height); // Clear for transparency
-                sfcCtx.drawImage(frame, 0, 0, width, height); // Draw frame, ensuring it's the correct size
-                gif.addFrame(standardizedFrameCanvas, { delay, copy: true });
+                gif.addFrame(frame, { delay });
             });
             // --- END FIX ---
 
@@ -292,10 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const rows = parseInt(rowsInput.value);
             const cols = parseInt(colsInput.value);
             const threshold = parseInt(thresholdInput.value);
-            const paddingTop = parseInt(paddingTopInput.value) || 0;
-            const paddingRight = parseInt(paddingRightInput.value) || 0;
-            const paddingBottom = parseInt(paddingBottomInput.value) || 0;
-            const paddingLeft = parseInt(paddingLeftInput.value) || 0;
             
             hiddenCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
             
@@ -303,36 +275,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let c = 0; c < cols; c++) {
                     const cellIndex = r * cols + c;
                     const cellCanvas = cellCanvases[cellIndex];
-                    if (!cellCanvas) continue;
+                    if (!cellCanvas || !cellPreviewRects[cellIndex]) continue;
+                    
                     const cellCtx = cellCanvas.getContext('2d');
-
-                    const xStart = c === 0 ? 0 : verticalLines[c - 1];
-                    const yStart = r === 0 ? 0 : horizontalLines[r - 1];
-                    const xEnd = c === cols - 1 ? video.videoWidth : verticalLines[c];
-                    const yEnd = r === rows - 1 ? video.videoHeight : horizontalLines[r];
                     
                     // --- FIX FOR JITTER/BOUNCE ---
-                    // Calculate start and end crop coordinates with padding, then round them.
-                    // This creates a stable source rectangle and prevents 1px dimension flickering.
-                    const sx1 = Math.round(xStart + paddingLeft);
-                    const sy1 = Math.round(yStart + paddingTop);
-                    const sx2 = Math.round(xEnd - paddingRight);
-                    const sy2 = Math.round(yEnd - paddingBottom);
-
-                    // Derive width and height from the rounded coordinates.
-                    let sWidth = sx2 - sx1;
-                    let sHeight = sy2 - sy1;
+                    // Use the pre-calculated, stable dimensions from cellPreviewRects
+                    const { sx, sy, sWidth, sHeight } = cellPreviewRects[cellIndex];
                     // --- END FIX ---
                     
-                    if (sWidth < 1) sWidth = 1;
-                    if (sHeight < 1) sHeight = 1;
-
                     // Resize canvas only if necessary
                     if (cellCanvas.width !== sWidth) cellCanvas.width = sWidth;
                     if (cellCanvas.height !== sHeight) cellCanvas.height = sHeight;
 
                     try {
-                        const imageData = hiddenCtx.getImageData(sx1, sy1, sWidth, sHeight);
+                        const imageData = hiddenCtx.getImageData(sx, sy, sWidth, sHeight);
                         const data = imageData.data;
 
                         for (let i = 0; i < data.length; i += 4) {
@@ -343,13 +300,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         cellCtx.putImageData(imageData, 0, 0);
 
                         if (isCapturing) {
-                             // Capture the content directly from the cell's preview canvas
-                             // This ensures what you see is what you get for the GIF frames
-                             // The canvas size is now stable thanks to pre-calculated rects.
+                            // During capture, use the separate, locked-in cellCaptureRects
+                            const captureRect = cellCaptureRects[cellIndex];
+                            if (!captureRect) continue;
+                            
                             const frameCanvas = document.createElement('canvas');
-                            frameCanvas.width = cellCanvas.width;
-                            frameCanvas.height = cellCanvas.height;
-                            frameCanvas.getContext('2d').drawImage(cellCanvas, 0, 0);
+                            frameCanvas.width = captureRect.sWidth;
+                            frameCanvas.height = captureRect.sHeight;
+                            const frameCtx = frameCanvas.getContext('2d');
+
+                            // Create a new ImageData from the hidden canvas using capture dimensions
+                            const frameImageData = hiddenCtx.getImageData(captureRect.sx, captureRect.sy, captureRect.sWidth, captureRect.sHeight);
+                            const frameData = frameImageData.data;
+                            for (let i = 0; i < frameData.length; i += 4) {
+                                if (frameData[i] <= threshold && frameData[i+1] <= threshold && frameData[i+2] <= threshold) {
+                                    frameData[i+3] = 0;
+                                }
+                            }
+                            // Put the processed (transparent) image data onto the frame canvas
+                            frameCtx.putImageData(frameImageData, 0, 0);
+
                             cellFrames[cellIndex].push(frameCanvas);
                         }
                     } catch (e) {
@@ -371,6 +341,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // New helper function to calculate preview rects on the fly for display purposes
+    function updateCellRects() {
+        cellPreviewRects = [];
+        const rows = parseInt(rowsInput.value);
+        const cols = parseInt(colsInput.value);
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                cellPreviewRects.push(getPreviewRect(r, c, rows, cols));
+            }
+        }
+    }
+
     function getPreviewRect(r, c, rows, cols) {
         const paddingTop = parseInt(paddingTopInput.value) || 0;
         const paddingRight = parseInt(paddingRightInput.value) || 0;
@@ -494,6 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const nextLineX = draggingLine.index < verticalLines.length - 1 ? verticalLines[draggingLine.index + 1] : video.videoWidth;
             
             verticalLines[draggingLine.index] = Math.max(prevLineX, Math.min(newX, nextLineX));
+            updateCellRects();
 
         } else if (draggingLine.type === 'h') {
             const newY = pos.y * scaleY;
@@ -501,6 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const nextLineY = draggingLine.index < horizontalLines.length - 1 ? horizontalLines[draggingLine.index + 1] : video.videoHeight;
             
             horizontalLines[draggingLine.index] = Math.max(prevLineY, Math.min(newY, nextLineY));
+            updateCellRects();
         }
         
         drawGridOverlay();
