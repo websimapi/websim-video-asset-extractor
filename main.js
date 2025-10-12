@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileNameDisplay = document.getElementById('file-name');
     const videoPreview = document.getElementById('video-preview');
     const processButton = document.getElementById('process-button');
+    const generateGifsButton = document.getElementById('generate-gifs-button');
     const gridContainer = document.getElementById('grid-container');
     const rowsInput = document.getElementById('rows');
     const colsInput = document.getElementById('cols');
@@ -10,9 +11,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const thresholdValue = document.getElementById('threshold-value');
     const paddingInput = document.getElementById('padding');
     const gridOverlay = document.getElementById('grid-overlay');
+    const gifFpsInput = document.getElementById('gif-fps');
+    const gifDurationInput = document.getElementById('gif-duration');
 
     let video;
     let animationFrameId;
+    let isCapturing = false;
+    let cellFrames = [];
+    let gifWorkerBlob = null;
+
+    // Preload gif.js worker
+    (async function preloadWorker() {
+        try {
+            const resp = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+            gifWorkerBlob = await resp.blob();
+        } catch (e) {
+            console.error("Failed to load gif.worker.js", e);
+            alert("Could not load a required component for GIF generation. Please check your internet connection and try again.");
+        }
+    })();
 
     // Grid state
     let verticalLines = [];
@@ -52,12 +69,91 @@ document.addEventListener('DOMContentLoaded', () => {
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
         }
+        
+        video.currentTime = 0;
+        isCapturing = true;
+        cellFrames = [];
 
         video.play().then(() => {
             setupGridAndProcess();
         }).catch(err => {
             alert("Could not play video. Make sure you've interacted with the page.");
             console.error("Video play error:", err);
+        });
+    });
+    
+    generateGifsButton.addEventListener('click', () => {
+        if (!cellFrames.length) {
+            alert('Please process the video first to capture frames.');
+            return;
+        }
+        if (!gifWorkerBlob) {
+            alert('GIF generator is not ready. Please wait a moment and try again.');
+            return;
+        }
+
+        generateGifsButton.disabled = true;
+        generateGifsButton.textContent = 'Generating...';
+
+        const gifFps = parseInt(gifFpsInput.value, 10);
+        const delay = 1000 / gifFps;
+        const totalCells = parseInt(rowsInput.value) * parseInt(colsInput.value);
+        let gifsCompleted = 0;
+
+        cellFrames.forEach((frames, index) => {
+            const cellContainer = gridContainer.children[index];
+            if (!cellContainer) return;
+
+            const statusEl = cellContainer.querySelector('.status');
+            statusEl.textContent = 'Building...';
+
+            const width = frames[0]?.width || 1;
+            const height = frames[0]?.height || 1;
+            
+            const workerUrl = URL.createObjectURL(gifWorkerBlob);
+            const gif = new GIF({
+                workers: 2,
+                quality: 10,
+                width,
+                height,
+                workerScript: workerUrl,
+                transparent: 0x000000 // Black will be transparent
+            });
+
+            frames.forEach(frame => {
+                gif.addFrame(frame, { delay, copy: true });
+            });
+
+            gif.on('progress', (p) => {
+                statusEl.textContent = `Building... ${(p * 100).toFixed(0)}%`;
+            });
+
+            gif.on('finished', (blob) => {
+                URL.revokeObjectURL(workerUrl);
+                const url = URL.createObjectURL(blob);
+                const img = document.createElement('img');
+                img.src = url;
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `asset_${index}.gif`;
+                a.appendChild(img);
+                
+                // Replace canvas with the gif link
+                const canvas = cellContainer.querySelector('canvas');
+                if (canvas) {
+                     cellContainer.replaceChild(a, canvas);
+                }
+                statusEl.textContent = 'Done!';
+
+                gifsCompleted++;
+                if (gifsCompleted === totalCells) {
+                    generateGifsButton.disabled = false;
+                    generateGifsButton.textContent = '3. Generate GIFs';
+                }
+            });
+
+            gif.render();
         });
     });
 
@@ -72,12 +168,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gridContainer.innerHTML = '';
         gridContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-
+        generateGifsButton.style.display = 'inline-block';
+        
         const cellCanvases = [];
         for (let i = 0; i < rows * cols; i++) {
+            const cellContainer = document.createElement('div');
+            cellContainer.className = 'cell-container';
+
             const canvas = document.createElement('canvas');
-            gridContainer.appendChild(canvas);
+            const status = document.createElement('div');
+            status.className = 'status';
+            status.textContent = 'Preview';
+
+            cellContainer.appendChild(canvas);
+            cellContainer.appendChild(status);
+            gridContainer.appendChild(cellContainer);
+            
             cellCanvases.push(canvas);
+            cellFrames.push([]);
         }
 
         resetGridLines();
@@ -96,6 +204,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             hiddenCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            
+            const captureDuration = parseFloat(gifDurationInput.value);
+            if (video.currentTime >= captureDuration && isCapturing) {
+                isCapturing = false;
+                console.log(`Finished capturing ${captureDuration}s of frames.`);
+            }
 
             const threshold = parseInt(thresholdInput.value);
             const padding = parseInt(paddingInput.value) || 0;
@@ -133,6 +247,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
                             cellCtx.putImageData(imageData, 0, 0);
+
+                            if(isCapturing) {
+                                const frameCanvas = document.createElement('canvas');
+                                frameCanvas.width = cellCanvas.width;
+                                frameCanvas.height = cellCanvas.height;
+                                frameCanvas.getContext('2d').drawImage(cellCanvas, 0, 0);
+                                cellFrames[cellIndex].push(frameCanvas);
+                            }
+
                         } catch (e) {
                              if (e instanceof DOMException && e.name === "IndexSizeError") {
                                 // This can happen if padding is too large, just skip frame for this cell
