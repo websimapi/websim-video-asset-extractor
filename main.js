@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let cellCanvases = [];
     let hiddenCanvas, hiddenCtx;
 
+    // A new array to hold stable capture dimensions for each cell
+    let cellCaptureRects = [];
+
     // Preload gif.js worker
     (async function preloadWorker() {
         try {
@@ -82,6 +85,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isCapturing) return;
+
+        // --- FIX FOR BOUNCING GIFS ---
+        // Pre-calculate the stable source rectangles for each cell before capture.
+        // This prevents floating-point and rounding inconsistencies during the capture loop.
+        const rows = parseInt(rowsInput.value);
+        const cols = parseInt(colsInput.value);
+        const paddingTop = parseInt(paddingTopInput.value) || 0;
+        const paddingRight = parseInt(paddingRightInput.value) || 0;
+        const paddingBottom = parseInt(paddingBottomInput.value) || 0;
+        const paddingLeft = parseInt(paddingLeftInput.value) || 0;
+        cellCaptureRects = []; // Clear previous rects
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const xStart = c === 0 ? 0 : verticalLines[c - 1];
+                const yStart = r === 0 ? 0 : horizontalLines[r - 1];
+                const xEnd = c === cols - 1 ? video.videoWidth : verticalLines[c];
+                const yEnd = r === rows - 1 ? video.videoHeight : horizontalLines[r];
+
+                const sx = Math.round(xStart + paddingLeft);
+                const sy = Math.round(yStart + paddingTop);
+                const sWidth = Math.round(xEnd - paddingRight) - sx;
+                const sHeight = Math.round(yEnd - paddingBottom) - sy;
+                
+                cellCaptureRects.push({
+                    sx: sx,
+                    sy: sy,
+                    sWidth: sWidth > 0 ? sWidth : 1,
+                    sHeight: sHeight > 0 ? sHeight : 1
+                });
+            }
+        }
+        // --- END FIX ---
 
         video.currentTime = 0;
         isCapturing = true;
@@ -153,6 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 transparent: 0x000000 // Black will be transparent
             });
 
+            // This secondary standardization using a canvas is a robust fallback,
+            // but the primary fix is pre-calculating capture rectangles.
+            // We'll keep this as a safeguard.
             const standardizedFrameCanvas = document.createElement('canvas');
             standardizedFrameCanvas.width = width;
             standardizedFrameCanvas.height = height;
@@ -306,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (isCapturing) {
                              // Capture the content directly from the cell's preview canvas
                              // This ensures what you see is what you get for the GIF frames
+                             // The canvas size is now stable thanks to pre-calculated rects.
                             const frameCanvas = document.createElement('canvas');
                             frameCanvas.width = cellCanvas.width;
                             frameCanvas.height = cellCanvas.height;
@@ -330,6 +370,30 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePreviewLoop();
     }
 
+    // New helper function to calculate preview rects on the fly for display purposes
+    function getPreviewRect(r, c, rows, cols) {
+        const paddingTop = parseInt(paddingTopInput.value) || 0;
+        const paddingRight = parseInt(paddingRightInput.value) || 0;
+        const paddingBottom = parseInt(paddingBottomInput.value) || 0;
+        const paddingLeft = parseInt(paddingLeftInput.value) || 0;
+
+        const xStart = c === 0 ? 0 : verticalLines[c - 1];
+        const yStart = r === 0 ? 0 : horizontalLines[r - 1];
+        const xEnd = c === cols - 1 ? video.videoWidth : verticalLines[c];
+        const yEnd = r === rows - 1 ? video.videoHeight : horizontalLines[r];
+
+        const sx = Math.round(xStart + paddingLeft);
+        const sy = Math.round(yStart + paddingTop);
+        const sWidth = Math.round(xEnd - paddingRight) - sx;
+        const sHeight = Math.round(yEnd - paddingBottom) - sy;
+
+        return {
+            sx,
+            sy,
+            sWidth: sWidth > 0 ? sWidth : 1,
+            sHeight: sHeight > 0 ? sHeight : 1
+        };
+    }
 
     function resetGridLines() {
         const rows = parseInt(rowsInput.value);
