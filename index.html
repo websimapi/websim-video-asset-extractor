@@ -31,6 +31,10 @@
                     <input type="number" id="cols" value="8" min="1">
                 </div>
                 <div>
+                    <label for="padding">Padding (px):</label>
+                    <input type="number" id="padding" value="0" min="0">
+                </div>
+                <div>
                     <label for="threshold">Black Threshold: <span id="threshold-value">20</span></label>
                     <input type="range" id="threshold" min="0" max="255" value="20">
                 </div>
@@ -44,7 +48,10 @@
         <div class="content-area">
             <div class="video-container">
                 <h2>Source Video</h2>
-                <video id="video-preview" controls muted loop playsinline src="placeholder.png"></video>
+                <div class="video-wrapper">
+                    <video id="video-preview" controls muted loop playsinline src="placeholder.png"></video>
+                    <canvas id="grid-overlay"></canvas>
+                </div>
             </div>
     
             <div class="grid-wrapper">
@@ -61,4 +68,3 @@
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
-
