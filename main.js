@@ -16,11 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const gridOverlay = document.getElementById('grid-overlay');
     const gifFpsInput = document.getElementById('gif-fps');
     const gifDurationInput = document.getElementById('gif-duration');
-    const vectorizeEnabled = document.getElementById('vectorize-enabled');
-    const bitDepthSelect = document.getElementById('bit-depth');
-    const vectorScaleInput = document.getElementById('vector-scale');
-    const vectorizeOptions = document.getElementById('vectorize-options');
-    const vectorizeScaleOption = document.getElementById('vectorize-scale-option');
 
     let video;
     let animationFrameId;
@@ -57,16 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     thresholdInput.addEventListener('input', (event) => {
         thresholdValue.textContent = event.target.value;
-    });
-
-    vectorizeEnabled.addEventListener('change', (event) => {
-        if (event.target.checked) {
-            vectorizeOptions.style.display = 'flex';
-            vectorizeScaleOption.style.display = 'flex';
-        } else {
-            vectorizeOptions.style.display = 'none';
-            vectorizeScaleOption.style.display = 'none';
-        }
     });
 
     [rowsInput, colsInput].forEach(input => {
@@ -221,6 +206,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const paddingBottom = parseInt(paddingBottomInput.value) || 0;
         const paddingLeft = parseInt(paddingLeftInput.value) || 0;
 
+        const gifFps = parseInt(gifFpsInput.value, 10);
+        const frameInterval = 1 / gifFps;
+        const captureDuration = parseFloat(gifDurationInput.value);
+        let nextCaptureTime = 0;
+
         function processFrame() {
             if (video.paused || video.ended) {
                 animationFrameId = requestAnimationFrame(processFrame);
@@ -228,11 +218,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             hiddenCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-            
-            const captureDuration = parseFloat(gifDurationInput.value);
-            if (video.currentTime >= captureDuration && isCapturing) {
+        
+            if (isCapturing && video.currentTime >= captureDuration) {
                 isCapturing = false;
-                console.log(`Finished capturing ${captureDuration}s of frames.`);
+                console.log(`Finished capturing frames for ${captureDuration}s.`);
+            }
+
+            const shouldCaptureThisFrame = isCapturing && video.currentTime >= nextCaptureTime;
+
+            if (shouldCaptureThisFrame) {
+                nextCaptureTime += frameInterval;
             }
 
             const threshold = parseInt(thresholdInput.value);
@@ -269,15 +264,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                     data[i + 3] = 0;
                                 }
                             }
-                            
-                            // Apply vectorization if enabled
-                            if (vectorizeEnabled.checked) {
-                                vectorizeImageData(imageData);
-                            }
-                            
                             cellCtx.putImageData(imageData, 0, 0);
 
-                            if(isCapturing) {
+                            if(shouldCaptureThisFrame) {
                                 // Create a new canvas with the exact padded dimensions
                                 const frameCanvas = document.createElement('canvas');
                                 frameCanvas.width = sWidth;
@@ -423,119 +412,5 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleMouseUp() {
         draggingLine = { type: null, index: -1 };
         gridOverlay.style.cursor = 'crosshair';
-    }
-    
-    function vectorizeImageData(imageData) {
-        const bitDepth = parseInt(bitDepthSelect.value);
-        const scale = parseFloat(vectorScaleInput.value);
-        
-        // Map bit depth to color levels
-        let colorLevels;
-        switch(bitDepth) {
-            case 8:
-                colorLevels = 4; // Very posterized
-                break;
-            case 16:
-                colorLevels = 16; // Medium posterization
-                break;
-            case 32:
-                colorLevels = 64; // Subtle posterization
-                break;
-            default:
-                colorLevels = 16;
-        }
-        
-        const data = imageData.data;
-        const width = imageData.width;
-        const height = imageData.height;
-        
-        // Apply scale factor if not 1
-        if (scale !== 1) {
-            const scaledWidth = Math.max(1, Math.floor(width / scale));
-            const scaledHeight = Math.max(1, Math.floor(height / scale));
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = scaledWidth;
-            tempCanvas.height = scaledHeight;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Downscale
-            tempCtx.putImageData(imageData, 0, 0);
-            const downscaled = tempCtx.getImageData(0, 0, scaledWidth, scaledHeight);
-            
-            // Upscale back (blocky effect)
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            tempCtx.imageSmoothingEnabled = false;
-            tempCtx.putImageData(downscaled, 0, 0);
-            tempCtx.drawImage(tempCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, width, height);
-            
-            const scaled = tempCtx.getImageData(0, 0, width, height);
-            data.set(scaled.data);
-        }
-        
-        const step = 256 / colorLevels;
-        
-        // Posterize: Reduce color palette
-        for (let i = 0; i < data.length; i += 4) {
-            if (data[i + 3] === 0) continue; // Skip transparent pixels
-            
-            data[i] = Math.round(data[i] / step) * step; // R
-            data[i + 1] = Math.round(data[i + 1] / step) * step; // G
-            data[i + 2] = Math.round(data[i + 2] / step) * step; // B
-        }
-        
-        // Simple edge smoothing using a 3x3 kernel
-        const tempData = new Uint8ClampedArray(data);
-        
-        for (let y = 1; y < height - 1; y++) {
-            for (let x = 1; x < width - 1; x++) {
-                const idx = (y * width + x) * 4;
-                
-                if (tempData[idx + 3] === 0) continue;
-                
-                // Count similar neighboring pixels
-                let similar = 0;
-                let total = 0;
-                
-                for (let dy = -1; dy <= 1; dy++) {
-                    for (let dx = -1; dx <= 1; dx++) {
-                        if (dx === 0 && dy === 0) continue;
-                        
-                        const nIdx = ((y + dy) * width + (x + dx)) * 4;
-                        if (tempData[nIdx + 3] === 0) continue;
-                        
-                        total++;
-                        const colorDiff = Math.abs(tempData[idx] - tempData[nIdx]) +
-                                        Math.abs(tempData[idx + 1] - tempData[nIdx + 1]) +
-                                        Math.abs(tempData[idx + 2] - tempData[nIdx + 2]);
-                        
-                        if (colorDiff < 50) similar++;
-                    }
-                }
-                
-                // If mostly similar neighbors, smooth the color
-                if (total > 0 && similar / total > 0.6) {
-                    let avgR = 0, avgG = 0, avgB = 0, count = 0;
-                    
-                    for (let dy = -1; dy <= 1; dy++) {
-                        for (let dx = -1; dx <= 1; dx++) {
-                            const nIdx = ((y + dy) * width + (x + dx)) * 4;
-                            if (tempData[nIdx + 3] > 0) {
-                                avgR += tempData[nIdx];
-                                avgG += tempData[nIdx + 1];
-                                avgB += tempData[nIdx + 2];
-                                count++;
-                            }
-                        }
-                    }
-                    
-                    if (count > 0) {
-                        data[idx] = Math.round(avgR / count / step) * step;
-                        data[idx + 1] = Math.round(avgG / count / step) * step;
-                        data[idx + 2] = Math.round(avgB / count / step) * step;
-                    }
-                }
-            }
-        }
     }
 });

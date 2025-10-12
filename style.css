@@ -96,11 +96,6 @@ input[type="number"] {
     text-align: center;
 }
 
-input[type="checkbox"] {
-    cursor: pointer;
-    margin-right: 5px;
-}
-
 input[type="range"] {
     width: 120px;
 }
@@ -218,19 +213,4 @@ input[type="range"] {
     text-align: center;
     color: #888;
     align-self: center;
-}
-
-#vectorize-options, #vectorize-scale-option {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-select {
-    padding: 5px;
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    cursor: pointer;
 }
