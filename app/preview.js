@@ -2,8 +2,8 @@ import { dom, state } from './state.js';
 import { resetGridLines, drawGridOverlay, setupDragListeners } from './grid.js';
 
 export function setupGridAndCanvases() {
-    const rows = parseInt(dom.rowsInput.value);
-    const cols = parseInt(dom.colsInput.value);
+    const rows = parseInt(dom.videoRowsInput.value);
+    const cols = parseInt(dom.videoColsInput.value);
 
     dom.gridContainer.innerHTML = '';
     dom.gridContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -60,8 +60,8 @@ export function startPreviewLoop() {
             return;
         }
 
-        const rows = parseInt(dom.rowsInput.value);
-        const cols = parseInt(dom.colsInput.value);
+        const rows = parseInt(dom.videoRowsInput.value);
+        const cols = parseInt(dom.videoColsInput.value);
         const threshold = parseInt(dom.thresholdInput.value);
 
         state.hiddenCtx.drawImage(state.video, 0, 0, state.video.videoWidth, state.video.videoHeight);

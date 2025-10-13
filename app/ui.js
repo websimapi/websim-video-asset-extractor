@@ -15,10 +15,37 @@ export function initUI() {
         dom.toggleSettingsButton.textContent = isHidden ? 'Hide Settings' : 'Settings';
     });
 
-    [dom.rowsInput, dom.colsInput].forEach(input => {
+    const rowsInputs = [dom.settingsRowsInput, dom.videoRowsInput];
+    const colsInputs = [dom.settingsColsInput, dom.videoColsInput];
+
+    rowsInputs.forEach(input => {
         input.addEventListener('change', () => {
+            rowsInputs.forEach(otherInput => otherInput.value = input.value);
             if (state.video && state.video.videoWidth > 0) {
                 setupGridAndCanvases();
+            }
+        });
+    });
+
+    colsInputs.forEach(input => {
+        input.addEventListener('change', () => {
+            colsInputs.forEach(otherInput => otherInput.value = input.value);
+            if (state.video && state.video.videoWidth > 0) {
+                setupGridAndCanvases();
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-increment, .btn-decrement').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const targetId = e.target.dataset.target;
+            const targetInput = document.getElementById(targetId);
+            if (targetInput) {
+                const step = e.target.classList.contains('btn-increment') ? 1 : -1;
+                let value = parseInt(targetInput.value, 10) + step;
+                if (value < 1) value = 1;
+                targetInput.value = value;
+                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
             }
         });
     });
@@ -85,7 +112,7 @@ function handleProcess() {
     state.video.currentTime = 0;
     state.video.pause(); // Pause to ensure the first frame is drawn correctly.
     state.isCapturing = true;
-    state.cellFrames = Array.from({ length: dom.rowsInput.value * dom.colsInput.value }, () => []);
+    state.cellFrames = Array.from({ length: dom.videoRowsInput.value * dom.videoColsInput.value }, () => []);
 
     dom.processButton.disabled = true;
     dom.processButton.textContent = 'Capturing...';

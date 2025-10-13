@@ -13,8 +13,8 @@ export function setupDragListeners() {
 }
 
 export function resetGridLines() {
-    const rows = parseInt(dom.rowsInput.value);
-    const cols = parseInt(dom.colsInput.value);
+    const rows = parseInt(dom.videoRowsInput.value);
+    const cols = parseInt(dom.videoColsInput.value);
     const { videoWidth, videoHeight } = state.video;
 
     state.verticalLines = [];
@@ -62,8 +62,8 @@ export function drawGridOverlay() {
 
 export function updateCellRects() {
     state.cellPreviewRects = [];
-    const rows = parseInt(dom.rowsInput.value);
-    const cols = parseInt(dom.colsInput.value);
+    const rows = parseInt(dom.videoRowsInput.value);
+    const cols = parseInt(dom.videoColsInput.value);
 
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {

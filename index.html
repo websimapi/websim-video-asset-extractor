@@ -26,12 +26,20 @@
             <div id="settings-panel" class="settings-panel" style="display: none;">
                 <div class="control-group settings">
                     <div>
-                        <label for="rows">Grid Rows:</label>
-                        <input type="number" id="rows" value="8" min="1">
+                        <label for="settings-rows">Grid Rows:</label>
+                        <div class="number-input-container">
+                            <button class="btn-decrement" data-target="settings-rows">-</button>
+                            <input type="number" id="settings-rows" value="8" min="1">
+                            <button class="btn-increment" data-target="settings-rows">+</button>
+                        </div>
                     </div>
                     <div>
-                        <label for="cols">Grid Columns:</label>
-                        <input type="number" id="cols" value="8" min="1">
+                        <label for="settings-cols">Grid Columns:</label>
+                        <div class="number-input-container">
+                            <button class="btn-decrement" data-target="settings-cols">-</button>
+                            <input type="number" id="settings-cols" value="8" min="1">
+                            <button class="btn-increment" data-target="settings-cols">+</button>
+                        </div>
                     </div>
                     <div class="padding-control-group">
                         <span>Padding (px)</span>
@@ -86,12 +94,20 @@
                     <h2>Source Video</h2>
                     <div class="grid-controls">
                         <div>
-                            <label for="rows">Rows:</label>
-                            <input type="number" id="rows" value="8" min="1">
+                            <label for="video-rows">Rows:</label>
+                            <div class="number-input-container">
+                                <button class="btn-decrement" data-target="video-rows">-</button>
+                                <input type="number" id="video-rows" value="8" min="1">
+                                <button class="btn-increment" data-target="video-rows">+</button>
+                            </div>
                         </div>
                         <div>
-                            <label for="cols">Cols:</label>
-                            <input type="number" id="cols" value="8" min="1">
+                            <label for="video-cols">Cols:</label>
+                            <div class="number-input-container">
+                                <button class="btn-decrement" data-target="video-cols">-</button>
+                                <input type="number" id="video-cols" value="8" min="1">
+                                <button class="btn-increment" data-target="video-cols">+</button>
+                            </div>
                         </div>
                     </div>
                 </div>

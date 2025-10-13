@@ -116,6 +116,37 @@ input[type="number"] {
     border-radius: 4px;
 }
 
+.number-input-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.number-input-container button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 1.1em;
+    line-height: 28px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.number-input-container input[type="number"] {
+    width: 50px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-size: 1em;
+    -moz-appearance: textfield; /* Firefox */
+}
+.number-input-container input[type="number"]::-webkit-outer-spin-button,
+.number-input-container input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 .padding-control-group {
     display: flex;
     flex-direction: column;
@@ -232,7 +263,7 @@ input[type="range"] {
     font-weight: bold;
 }
 
-.grid-controls input[type="number"] {
+.grid-controls .number-input-container input[type="number"] {
     width: 50px;
 }
 
@@ -244,6 +275,7 @@ input[type="range"] {
     background-color: #000;
     border-radius: 4px;
     overflow: hidden; /* Ensures canvas corners are also rounded */
+    max-width: 100%; /* Prevent overflow on small screens */
 }
 
 #grid-overlay {
@@ -402,6 +434,7 @@ input[type="range"] {
 
     .grid-container {
         aspect-ratio: unset;
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
     }
     
     .generation-mode {
