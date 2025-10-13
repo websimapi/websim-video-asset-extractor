@@ -48,7 +48,7 @@
                     </div>
                     <div>
                         <label for="gif-fps">GIF FPS:</label>
-                        <input type="number" id="gif-fps" value="10" min="1" max="60">
+                        <input type="number" id="gif-fps" value="30" min="1" max="60">
                     </div>
                     <div>
                         <label for="gif-duration">Duration (s):</label>
@@ -82,7 +82,19 @@
 
         <div class="content-area">
             <div class="video-container">
-                <h2>Source Video</h2>
+                <div class="video-header">
+                    <h2>Source Video</h2>
+                    <div class="grid-controls">
+                        <div>
+                            <label for="rows">Rows:</label>
+                            <input type="number" id="rows" value="8" min="1">
+                        </div>
+                        <div>
+                            <label for="cols">Cols:</label>
+                            <input type="number" id="cols" value="8" min="1">
+                        </div>
+                    </div>
+                </div>
                 <div class="video-wrapper">
                     <video id="video-preview" controls muted loop playsinline src="placeholder.png"></video>
                     <canvas id="grid-overlay"></canvas>

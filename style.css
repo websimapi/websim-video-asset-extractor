@@ -184,6 +184,13 @@ input[type="range"] {
     background-color: var(--container-bg);
     padding: 20px;
     border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.grid-wrapper {
+    /* For cases where grid has many rows, allow scrolling */
+    max-height: 80vh;
 }
 
 .video-container h2, .grid-wrapper h2 {
@@ -194,6 +201,40 @@ input[type="range"] {
     margin-bottom: 15px;
 }
 
+.video-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.video-container .video-header h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+    text-align: left;
+}
+
+.grid-controls {
+    display: flex;
+    gap: 15px;
+}
+
+.grid-controls > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.grid-controls label {
+    font-weight: bold;
+}
+
+.grid-controls input[type="number"] {
+    width: 50px;
+}
 
 .video-wrapper {
     position: relative;
@@ -325,6 +366,20 @@ input[type="range"] {
 @media (max-width: 768px) {
     body {
         padding: 10px;
+    }
+
+    .video-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .video-container .video-header h2 {
+        text-align: center;
+    }
+
+    .grid-controls {
+        justify-content: space-around;
     }
 
     .main-container {
