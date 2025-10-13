@@ -34,6 +34,8 @@ export const state = {
     cellCanvases: [],
     hiddenCanvas: null,
     hiddenCtx: null,
+    // A new property to store rendered video dimensions and offset
+    renderedVideoRect: { x: 0, y: 0, width: 0, height: 0 },
     // A new array to hold stable capture dimensions for each cell
     cellCaptureRects: [],
     // A separate array for preview rects to allow real-time updates without affecting capture

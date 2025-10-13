@@ -1,5 +1,5 @@
 import { dom, state } from './state.js';
-import { resetGridLines, drawGridOverlay, setupDragListeners } from './grid.js';
+import { resetGridLines, drawGridOverlay, setupDragListeners, updateRenderedVideoRect } from './grid.js';
 
 export function setupGridAndCanvases() {
     const rows = parseInt(dom.videoRowsInput.value);
@@ -37,6 +37,7 @@ export function setupGridAndCanvases() {
         state.cellFrames.push([]);
     }
 
+    updateRenderedVideoRect();
     resetGridLines();
     drawGridOverlay();
     setupDragListeners();
