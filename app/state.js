@@ -19,6 +19,8 @@ export const dom = {
     exportOptions: document.getElementById('export-options'),
     selectAllButton: document.getElementById('select-all-button'),
     deselectAllButton: document.getElementById('deselect-all-button'),
+    toggleSettingsButton: document.getElementById('toggle-settings-button'),
+    settingsPanel: document.getElementById('settings-panel'),
 };
 
 export const state = {

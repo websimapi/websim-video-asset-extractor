@@ -9,6 +9,12 @@ export function initUI() {
         dom.thresholdValue.textContent = event.target.value;
     });
 
+    dom.toggleSettingsButton.addEventListener('click', () => {
+        const isHidden = dom.settingsPanel.style.display === 'none';
+        dom.settingsPanel.style.display = isHidden ? 'block' : 'none';
+        dom.toggleSettingsButton.textContent = isHidden ? 'Hide Settings' : 'Settings';
+    });
+
     [dom.rowsInput, dom.colsInput].forEach(input => {
         input.addEventListener('change', () => {
             if (state.video && state.video.videoWidth > 0) {

@@ -15,58 +15,67 @@
         </header>
 
         <div class="controls">
-            <div class="control-group">
+            <div class="control-group upload-group">
                 <label for="video-upload" class="button">1. Upload Video</label>
                 <input type="file" id="video-upload" accept="video/*" hidden>
                 <span id="file-name">No file chosen</span>
             </div>
             
-            <div class="control-group settings">
-                <div>
-                    <label for="rows">Grid Rows:</label>
-                    <input type="number" id="rows" value="8" min="1">
-                </div>
-                <div>
-                    <label for="cols">Grid Columns:</label>
-                    <input type="number" id="cols" value="8" min="1">
-                </div>
-                <div class="padding-control-group">
-                    <span>Padding (px)</span>
-                    <div class="padding-inputs">
-                        <input type="number" id="padding-top" value="0" min="0" title="Top Padding" placeholder="T">
-                        <input type="number" id="padding-right" value="0" min="0" title="Right Padding" placeholder="R">
-                        <input type="number" id="padding-bottom" value="0" min="0" title="Bottom Padding" placeholder="B">
-                        <input type="number" id="padding-left" value="0" min="0" title="Left Padding" placeholder="L">
+            <button id="toggle-settings-button">Settings</button>
+
+            <div id="settings-panel" class="settings-panel" style="display: none;">
+                <div class="control-group settings">
+                    <div>
+                        <label for="rows">Grid Rows:</label>
+                        <input type="number" id="rows" value="8" min="1">
                     </div>
-                </div>
-                <div>
-                    <label for="threshold">Black Threshold: <span id="threshold-value">20</span></label>
-                    <input type="range" id="threshold" min="0" max="255" value="20">
-                </div>
-                <div>
-                    <label for="gif-fps">GIF FPS:</label>
-                    <input type="number" id="gif-fps" value="10" min="1" max="60">
-                </div>
-                <div>
-                    <label for="gif-duration">Duration (s):</label>
-                    <input type="number" id="gif-duration" value="2" min="1" max="30">
+                    <div>
+                        <label for="cols">Grid Columns:</label>
+                        <input type="number" id="cols" value="8" min="1">
+                    </div>
+                    <div class="padding-control-group">
+                        <span>Padding (px)</span>
+                        <div class="padding-inputs">
+                            <input type="number" id="padding-top" value="0" min="0" title="Top Padding" placeholder="T">
+                            <input type="number" id="padding-right" value="0" min="0" title="Right Padding" placeholder="R">
+                            <input type="number" id="padding-bottom" value="0" min="0" title="Bottom Padding" placeholder="B">
+                            <input type="number" id="padding-left" value="0" min="0" title="Left Padding" placeholder="L">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="threshold">Black Threshold: <span id="threshold-value">20</span></label>
+                        <input type="range" id="threshold" min="0" max="255" value="20">
+                    </div>
+                    <div>
+                        <label for="gif-fps">GIF FPS:</label>
+                        <input type="number" id="gif-fps" value="10" min="1" max="60">
+                    </div>
+                    <div>
+                        <label for="gif-duration">Duration (s):</label>
+                        <input type="number" id="gif-duration" value="2" min="1" max="30">
+                    </div>
                 </div>
             </div>
 
-            <div class="control-group">
+
+            <div class="main-buttons">
                 <button id="process-button">2. Process Video</button>
                 <button id="generate-gifs-button" style="display: none;">3. Generate GIFs</button>
             </div>
 
-            <div id="export-options" class="control-group settings" style="display: none;">
+            <div id="export-options" class="control-group settings export-controls" style="display: none;">
                 <button id="select-all-button">Select All</button>
                 <button id="deselect-all-button">Deselect All</button>
                 <div class="generation-mode">
-                    <label>Generation Mode:</label>
-                    <input type="radio" id="mode-parallel" name="gen-mode" value="parallel" checked>
-                    <label for="mode-parallel">Parallel</label>
-                    <input type="radio" id="mode-sequential" name="gen-mode" value="sequential">
-                    <label for="mode-sequential">Sequential</label>
+                    <label>Mode:</label>
+                    <div>
+                        <input type="radio" id="mode-parallel" name="gen-mode" value="parallel" checked>
+                        <label for="mode-parallel">Parallel</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="mode-sequential" name="gen-mode" value="sequential">
+                        <label for="mode-sequential">Sequential</label>
+                    </div>
                 </div>
             </div>
         </div>

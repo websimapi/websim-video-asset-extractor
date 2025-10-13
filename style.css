@@ -42,11 +42,52 @@ header h1 {
     background-color: var(--container-bg);
     padding: 20px;
     border-radius: 8px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-areas:
+        "upload settings-toggle actions"
+        "settings settings settings"
+        "export export export";
     align-items: center;
-    gap: 20px;
+    gap: 15px;
+}
+
+.upload-group {
+    grid-area: upload;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+#toggle-settings-button {
+    grid-area: settings-toggle;
+}
+
+.settings-panel {
+    grid-area: settings;
+    background-color: rgba(0,0,0,0.2);
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+.main-buttons {
+    grid-area: actions;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.main-buttons button {
+    width: 100%;
+    max-width: 200px;
+}
+
+.export-controls {
+    grid-area: export;
+    justify-content: center !important; /* Override .control-group */
 }
 
 .control-group {
@@ -126,6 +167,11 @@ input[type="range"] {
 #file-name {
     font-style: italic;
     color: #ccc;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
 }
 
 .content-area {
@@ -179,7 +225,6 @@ input[type="range"] {
 .grid-container {
     display: grid;
     gap: 5px;
-    aspect-ratio: 1 / 1;
     border: 1px solid var(--border-color);
     padding: 5px;
 }
@@ -231,4 +276,88 @@ input[type="range"] {
     text-align: center;
     color: #888;
     align-self: center;
+}
+
+
+/* Mobile Styles */
+@media (max-width: 900px) {
+    .controls {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "upload"
+            "settings-toggle"
+            "settings"
+            "actions"
+            "export";
+        justify-items: stretch;
+    }
+
+    .upload-group, .main-buttons {
+        align-items: stretch;
+    }
+
+    .main-buttons button {
+       max-width: none;
+    }
+
+    .control-group.settings {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .control-group.settings > div,
+    .padding-control-group {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .padding-control-group {
+       flex-direction: column;
+       gap: 10px;
+       align-items: center;
+    }
+}
+
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .main-container {
+        gap: 15px;
+    }
+
+    .controls {
+        padding: 15px;
+    }
+
+    .content-area {
+        grid-template-columns: 1fr;
+    }
+    
+    .grid-wrapper {
+        /* On small screens, having a square preview grid can take up a lot of space.
+           Let's make it more flexible. */
+        min-height: 300px;
+    }
+
+    .grid-container {
+        aspect-ratio: unset;
+    }
+    
+    .generation-mode {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    .export-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
 }
