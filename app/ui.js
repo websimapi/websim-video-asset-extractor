@@ -106,6 +106,8 @@ function handleProcess() {
 
     if (state.isCapturing) return;
 
+    // Update rects to ensure padding is correctly applied for capture
+    updateCellRects(); 
     // Pre-calculate the stable source rectangles for each cell before capture.
     state.cellCaptureRects = JSON.parse(JSON.stringify(state.cellPreviewRects));
 

@@ -83,10 +83,10 @@ function getPreviewRect(r, c, rows, cols) {
     const xEnd = c === cols - 1 ? state.video.videoWidth : state.verticalLines[c];
     const yEnd = r === rows - 1 ? state.video.videoHeight : state.horizontalLines[r];
 
-    const sx = Math.round(xStart + paddingLeft);
-    const sy = Math.round(yStart + paddingTop);
-    const sWidth = Math.round(xEnd - paddingRight) - sx;
-    const sHeight = Math.round(yEnd - paddingBottom) - sy;
+    const sx = Math.round(xStart) + paddingLeft;
+    const sy = Math.round(yStart) + paddingTop;
+    const sWidth = Math.round(xEnd - xStart) - paddingLeft - paddingRight;
+    const sHeight = Math.round(yEnd - yStart) - paddingTop - paddingBottom;
 
     return {
         sx,
