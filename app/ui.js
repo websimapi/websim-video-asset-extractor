@@ -41,10 +41,26 @@ export function initUI() {
             const targetId = e.target.dataset.target;
             const targetInput = document.getElementById(targetId);
             if (targetInput) {
+                const stepAttr = targetInput.getAttribute('step');
+                const isFloat = stepAttr && stepAttr.includes('.');
+                
                 const step = e.target.classList.contains('btn-increment') ? 1 : -1;
-                let value = parseInt(targetInput.value, 10) + step;
-                if (value < 1) value = 1;
-                targetInput.value = value;
+                const stepValue = parseFloat(stepAttr || '1');
+
+                let currentValue = isFloat ? parseFloat(targetInput.value) : parseInt(targetInput.value, 10);
+                let value = currentValue + (step * stepValue);
+                
+                const min = parseFloat(targetInput.min);
+                if (!isNaN(min) && value < min) {
+                    value = min;
+                }
+
+                const max = parseFloat(targetInput.max);
+                if (!isNaN(max) && value > max) {
+                    value = max;
+                }
+
+                targetInput.value = isFloat ? value.toFixed(1) : value;
                 targetInput.dispatchEvent(new Event('change', { bubbles: true }));
             }
         });

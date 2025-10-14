@@ -17,6 +17,7 @@ export const dom = {
     paddingLeftInput: document.getElementById('padding-left'),
     gridOverlay: document.getElementById('grid-overlay'),
     gifFpsInput: document.getElementById('gif-fps'),
+    gifSpeedInput: document.getElementById('gif-speed'),
     gifDurationInput: document.getElementById('gif-duration'),
     exportOptions: document.getElementById('export-options'),
     selectAllButton: document.getElementById('select-all-button'),

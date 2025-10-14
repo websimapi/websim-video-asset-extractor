@@ -36,7 +36,8 @@ export function generateGifs() {
 
 function generateGifsParallel(indices) {
     const gifFps = parseInt(dom.gifFpsInput.value, 10);
-    const delay = 1000 / gifFps;
+    const speed = parseFloat(dom.gifSpeedInput.value);
+    const delay = (1000 / gifFps) / speed;
     let gifsCompleted = 0;
 
     indices.forEach(index => {
@@ -52,7 +53,8 @@ function generateGifsParallel(indices) {
 
 function generateGifsSequentially(indices) {
     const gifFps = parseInt(dom.gifFpsInput.value, 10);
-    const delay = 1000 / gifFps;
+    const speed = parseFloat(dom.gifSpeedInput.value);
+    const delay = (1000 / gifFps) / speed;
     let currentIndex = 0;
 
     function next() {
