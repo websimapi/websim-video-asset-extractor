@@ -26,6 +26,7 @@ export const dom = {
     deselectAllButton: document.getElementById('deselect-all-button'),
     toggleSettingsButton: document.getElementById('toggle-settings-button'),
     settingsPanel: document.getElementById('settings-panel'),
+    twitchToggle: document.getElementById('twitch-toggle'),
 };
 
 export const state = {

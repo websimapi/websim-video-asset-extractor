@@ -70,8 +70,58 @@ function generateGifsSequentially(indices) {
     next();
 }
 
-function generateSingleGif(index, delay, onFinishedCallback) {
-    const frames = state.cellFrames[index];
+function prepareFramesForTwitch(frames) {
+    // Spec 4: Max 60 frames
+    let processedFrames = frames;
+    if (frames.length > 60) {
+        processedFrames = [];
+        const step = frames.length / 60;
+        for (let i = 0; i < 60; i++) {
+            const frameIndex = Math.floor(i * step);
+            processedFrames.push(frames[frameIndex]);
+        }
+    }
+
+    if (processedFrames.length === 0) return { frames: [], width: 0, height: 0 };
+    
+    const firstFrame = processedFrames[0];
+    const sourceWidth = firstFrame.width;
+    const sourceHeight = firstFrame.height;
+
+    // Spec 1 & 3: Square shape, 112x112 resolution
+    const TWITCH_TARGET_SIZE = 112;
+    const finalFrames = [];
+
+    processedFrames.forEach(frame => {
+        const squareCanvas = document.createElement('canvas');
+        squareCanvas.width = TWITCH_TARGET_SIZE;
+        squareCanvas.height = TWITCH_TARGET_SIZE;
+        const ctx = squareCanvas.getContext('2d');
+
+        let drawWidth, drawHeight, dx, dy;
+        const aspectRatio = sourceWidth / sourceHeight;
+        
+        if (aspectRatio > 1) { // Landscape
+            drawWidth = TWITCH_TARGET_SIZE;
+            drawHeight = TWITCH_TARGET_SIZE / aspectRatio;
+        } else { // Portrait or square
+            drawHeight = TWITCH_TARGET_SIZE;
+            drawWidth = TWITCH_TARGET_SIZE * aspectRatio;
+        }
+
+        dx = (TWITCH_TARGET_SIZE - drawWidth) / 2;
+        dy = (TWITCH_TARGET_SIZE - drawHeight) / 2;
+
+        ctx.drawImage(frame, dx, dy, drawWidth, drawHeight);
+        finalFrames.push(squareCanvas);
+    });
+
+    return { frames: finalFrames, width: TWITCH_TARGET_SIZE, height: TWITCH_TARGET_SIZE };
+}
+
+
+function generateSingleGif(index, delay, onFinishedCallback, qualityOverride = null) {
+    let frames = state.cellFrames[index];
     const cellContainer = dom.gridContainer.children[index];
     if (!cellContainer) return;
 
@@ -84,13 +134,29 @@ function generateSingleGif(index, delay, onFinishedCallback) {
     const statusEl = cellContainer.querySelector('.status');
     statusEl.textContent = 'Building...';
 
-    const firstFrame = frames[0];
-    const width = firstFrame.width;
-    const height = firstFrame.height;
+    let width, height;
+
+    if (dom.twitchToggle.checked) {
+        const twitchFrames = prepareFramesForTwitch(frames);
+        frames = twitchFrames.frames;
+        width = twitchFrames.width;
+        height = twitchFrames.height;
+    } else {
+        const firstFrame = frames[0];
+        width = firstFrame.width;
+        height = firstFrame.height;
+    }
+    
+    if (frames.length === 0) {
+         console.warn(`No frames to process for cell ${index} after Twitch prep. Skipping.`);
+         statusEl.textContent = 'Error!';
+         if (onFinishedCallback) onFinishedCallback();
+         return;
+    }
 
     const workerUrl = URL.createObjectURL(state.gifWorkerBlob);
     
-    const quality = parseInt(dom.gifQualityInput.value, 10);
+    const quality = qualityOverride !== null ? qualityOverride : parseInt(dom.gifQualityInput.value, 10);
     let dither = dom.gifDitherInput.value;
     if (dither === 'false') {
         dither = false;
@@ -116,6 +182,21 @@ function generateSingleGif(index, delay, onFinishedCallback) {
 
     gif.on('finished', (blob) => {
         URL.revokeObjectURL(workerUrl);
+
+        // Spec 2: Max 1MB file size
+        if (dom.twitchToggle.checked && blob.size > 1024 * 1024) {
+            const newQuality = quality + 5;
+            if (newQuality <= 30) {
+                statusEl.textContent = `Too big, retrying... (Q:${newQuality})`;
+                // Retry with lower quality
+                generateSingleGif(index, delay, onFinishedCallback, newQuality);
+                return;
+            } else {
+                statusEl.textContent = 'Too big (>1MB)';
+                console.warn(`GIF for cell ${index} is > 1MB even at lowest quality.`);
+            }
+        }
+
         const url = URL.createObjectURL(blob);
         const img = document.createElement('img');
         img.src = url;
