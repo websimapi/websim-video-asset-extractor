@@ -89,9 +89,17 @@ function generateSingleGif(index, delay, onFinishedCallback) {
     const height = firstFrame.height;
 
     const workerUrl = URL.createObjectURL(state.gifWorkerBlob);
+    
+    const quality = parseInt(dom.gifQualityInput.value, 10);
+    let dither = dom.gifDitherInput.value;
+    if (dither === 'false') {
+        dither = false;
+    }
+
     const gif = new GIF({
         workers: 2,
-        quality: 10,
+        quality: quality,
+        dither: dither,
         width,
         height,
         workerScript: workerUrl,

@@ -107,13 +107,18 @@ header h1 {
     font-weight: bold;
 }
 
-input[type="number"] {
+input[type="number"],
+select {
     width: 60px;
     padding: 5px;
     background-color: var(--bg-color);
     color: var(--text-color);
     border: 1px solid var(--border-color);
     border-radius: 4px;
+}
+
+#gif-dither {
+    width: 150px;
 }
 
 .number-input-container {
